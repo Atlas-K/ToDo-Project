@@ -1,0 +1,121 @@
+class Program
+{
+    public static string json;
+    static void Main(string[] args)
+    {
+        Dictionary<int, Dictionary<string, DateTime>> mainDict = LoadFile("tasks.json"); // Load the file
+
+        int entryNum = InputConverter("How many entries do you want to make?");
+        int counter = 0;
+        while (counter < entryNum)
+        {
+            int taskImportance;
+            string name;
+            DateTime dueDate;
+            mainDict = AddToDict(mainDict, out taskImportance, out name, out dueDate);
+            counter++;
+        }
+
+        bool lastCall = false;
+        while (lastCall == false)
+        {
+            Console.WriteLine("If you want to add another task, press 'n', if you want to delete a task, press 'd', if you want to exit the program, press 'e'");
+            string? answer = Console.ReadLine();
+            if (answer.Equals("e"))
+                lastCall = true;
+            else if (answer.Equals("n"))
+            {
+                int taskImportance;
+                string name;
+                DateTime dueDate;
+                mainDict = AddToDict(mainDict, out taskImportance, out name, out dueDate);
+            }
+            else if (answer.Equals("d"))
+            {
+                int toDelete = InputConverter("Enter the importance level of the task you want to delete");
+                Console.WriteLine("Enter the name of the task you want to delete");
+                string? taskName = Console.ReadLine();
+
+                if (mainDict.ContainsKey(toDelete) && mainDict[toDelete].ContainsKey(taskName))
+                {
+                    mainDict[toDelete].Remove(taskName);
+                    Console.WriteLine($"The task with {taskName} task name is deleted");
+                }
+                else Console.WriteLine("Task is not found");
+            }
+        }
+
+        DateTime here = DateTime.Now;
+        Console.WriteLine("---------------------");
+        Console.WriteLine("Reading from the file");
+        Console.WriteLine("---------------------");
+        foreach (var i in mainDict)
+        {
+            Console.WriteLine($"This task's importance level is = {i.Key}");
+            foreach (var entry in i.Value)
+            {
+                int daysLeft = (entry.Value - here).Days;
+                if (daysLeft < 2)
+                {
+                    Console.WriteLine($"Task Name = {entry.Key} : Due date {entry.Value}");
+                    Console.WriteLine($"You have only {daysLeft} day(s) left to complete your {entry.Key} task.");
+                    Console.WriteLine("-----------------------");
+                }
+                else
+                    Console.WriteLine($"Task Name = {entry.Key} : Task Due Date = {entry.Value}");
+                Console.WriteLine("-----------------------");
+            }
+        }
+
+        // Save the dictionary back to the file abnove
+        SaveToFile(mainDict, "tasks.json");
+    }
+
+    static Dictionary<int, Dictionary<string, DateTime>> LoadFile(string filename)
+    {
+        Dictionary<int, Dictionary<string, DateTime>> newDict = new Dictionary<int, Dictionary<string, DateTime>>();
+        if (File.Exists(filename))
+        {
+            using StreamReader reader = new StreamReader(filename);
+            json = reader.ReadToEnd();
+            newDict = JsonSerializer.Deserialize<Dictionary<int, Dictionary<string, DateTime>>>(json) ?? newDict;
+        }
+        return newDict;
+    }
+
+    static void SaveToFile(Dictionary<int, Dictionary<string, DateTime>> mainDict, string filename)
+    {
+        string json = JsonSerializer.Serialize(mainDict, new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(filename, json);
+        Console.WriteLine("Tasks have been saved to the file.");
+    }
+
+    static Dictionary<int, Dictionary<string, DateTime>> AddToDict(Dictionary<int, Dictionary<string, DateTime>> mainDict,
+        out int import, out string descript, out DateTime days)
+    {
+        import = InputConverter("Enter the task importance (1-5):");
+        Console.WriteLine("Enter the task name:");
+        descript = Console.ReadLine();
+        int descripts = InputConverter("Enter the number of days until the task is due:");
+        days = DateTime.Now.AddDays(descripts);
+        if (!mainDict.ContainsKey(import))
+        {
+            mainDict[import] = new Dictionary<string, DateTime>();
+        }
+        mainDict[import][descript] = days;
+        return mainDict;
+    }
+
+    static int InputConverter(string message)
+    {
+        Console.WriteLine(message);
+        string? consty = Console.ReadLine();
+        int number;
+        while (!int.TryParse(consty, out number))
+        {
+            Console.WriteLine("Enter a valid number:");
+            consty = Console.ReadLine();
+        }
+        return number;
+    }
+}
